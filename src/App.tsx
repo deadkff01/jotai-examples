@@ -4,26 +4,44 @@ import React from "react";
 import GlobalStyles from "components/GlobalStyles";
 import "./App.css";
 import { atom, useAtom } from "jotai";
-import { countAtom } from "atoms/counter";
 
-const moreFiveAtom = atom((get) => get(countAtom) + 5);
+const url = atom<string>(
+  "https://hacker-news.firebaseio.com/v0/topstories.json"
+);
+const fetchUrlAtom = atom(async (get) => {
+  const response = await fetch(get(url));
+  const json = await response.json();
+
+  const requests = json.slice(0, 10).map(async (id: number) => {
+    const post = await fetch(
+      `https://hacker-news.firebaseio.com/v0/item/${id}.json`
+    );
+    const result = await post.json();
+    return result;
+  });
+  console.log(requests);
+  const resultFinal = await Promise.all(requests);
+  console.log(resultFinal);
+  return resultFinal;
+});
 
 function App() {
-  const [count, setCount] = useAtom(countAtom);
-  const [moreFive] = useAtom(moreFiveAtom);
+  const [posts] = useAtom(fetchUrlAtom);
+
   return (
     <>
       <GlobalStyles />
+      <h1>Top 10 HackerNews posts</h1>
       <div className="App">
-        <h1 data-testid="count-value">{count}</h1>
-        <h1>{moreFive}</h1>
-        <button
-          data-testid="btn-increase"
-          onClick={() => setCount((prev) => prev + 1)}
-        >
-          increase
-        </button>
-        <button onClick={() => setCount((prev) => prev - 1)}>decrease</button>
+        <ul>
+          {posts.map((data: any) => (
+            <li>
+              <a href={data.url} rel="noreferrer" target="_blank">
+                {data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   );
